@@ -283,6 +283,17 @@
 
   .map-link:hover { text-decoration: underline; }
 
+  .listing-link {
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .listing-link:hover { text-decoration: underline; }
+
   .empty-state {
     grid-column: 1 / -1;
     text-align: center;
@@ -497,7 +508,7 @@
 
       <div class="form-group">
         <label>Precio ($/mes)</label>
-        <input type="text" id="f-price" placeholder="Ej: $1.800.000" />
+        <input type="text" id="f-price" placeholder="Ej: 1800000" oninput="formatPriceInput(this)" />
       </div>
 
       <div class="form-group">
@@ -518,6 +529,11 @@
       <div class="form-group full">
         <label>Link de Google Maps (opcional)</label>
         <input type="url" id="f-maplink" placeholder="https://maps.google.com/..." />
+      </div>
+
+      <div class="form-group full">
+        <label>Link del anuncio (Fincaraíz, Mercado Libre, etc.)</label>
+        <input type="url" id="f-listing" placeholder="https://www.fincaraiz.com.co/..." />
       </div>
 
       <div class="form-group full">
@@ -603,6 +619,21 @@ async function save() {
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
+function formatCOP(val) {
+  // Takes a raw number string or number like "1800000" and returns "$1.800.000"
+  const num = parseInt(String(val).replace(/\D/g, ''));
+  if (!num && num !== 0) return '';
+  return '$' + num.toLocaleString('es-CO');
+}
+
+function formatPriceInput(el) {
+  // Strip non-digits, then format with dots
+  const raw = el.value.replace(/\D/g, '');
+  if (!raw) { el.value = ''; return; }
+  const num = parseInt(raw);
+  el.value = num.toLocaleString('es-CO');
+}
+
 function renderLoading() {
   document.getElementById('grid').innerHTML = `<div class="loading-state"><p>Cargando apartamentos...</p></div>`;
   document.getElementById('stats-bar').innerHTML = '';
@@ -645,6 +676,9 @@ function renderGrid() {
     const mapHTML = a.maplink
       ? `<a class="map-link" href="${escHtml(a.maplink)}" target="_blank" rel="noopener"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>Ver en mapa</a>`
       : '';
+    const listingHTML = a.listing
+      ? `<a class="listing-link" href="${escHtml(a.listing)}" target="_blank" rel="noopener"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Ver anuncio</a>`
+      : '';
     const roomsStr = [a.rooms ? `${a.rooms} hab.` : '', a.baths ? `${a.baths} baño${a.baths>1?'s':''}` : ''].filter(Boolean).join(' · ');
     return `
     <div class="card ${a.status==='disc'?'discarded':''}" id="card-${a.id}">
@@ -662,8 +696,8 @@ function renderGrid() {
       </div>
       <div class="card-footer">
         <div>
-          ${a.price ? `<div class="price">${escHtml(a.price)}</div>` : ''}
-          ${mapHTML}
+          ${a.price ? `<div class="price">${formatCOP(a.price)}</div>` : ''}
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap">${mapHTML}${listingHTML}</div>
         </div>
         <div class="card-actions">
           <button class="icon-btn" title="Cambiar estado" onclick="cycleStatus('${a.id}')">
@@ -702,10 +736,11 @@ function openModal(apt) {
   editingId = apt ? apt.id : null;
   document.getElementById('modal-title').textContent = apt ? 'Editar apartamento' : 'Nuevo apartamento';
   document.getElementById('f-name').value    = apt?.name    || '';
-  document.getElementById('f-price').value   = apt?.price   || '';
+  document.getElementById('f-price').value   = apt?.price ? parseInt(String(apt.price).replace(/\D/g,'')).toLocaleString('es-CO') : '';
   document.getElementById('f-status').value  = apt?.status  || 'pending';
   document.getElementById('f-address').value = apt?.address || '';
   document.getElementById('f-maplink').value = apt?.maplink || '';
+  document.getElementById('f-listing').value = apt?.listing || '';
   document.getElementById('f-photo').value   = apt?.photo   || '';
   document.getElementById('f-rooms').value   = apt?.rooms   || '';
   document.getElementById('f-baths').value   = apt?.baths   || '';
@@ -747,10 +782,11 @@ async function saveApt() {
 
   const data = {
     name,
-    price:   document.getElementById('f-price').value.trim(),
+    price:   document.getElementById('f-price').value.replace(/\D/g, ''),
     status:  document.getElementById('f-status').value,
     address: document.getElementById('f-address').value.trim(),
     maplink: document.getElementById('f-maplink').value.trim(),
+    listing: document.getElementById('f-listing').value.trim(),
     photo:   firstPhoto,
     rooms:   parseInt(document.getElementById('f-rooms').value)||0,
     baths:   parseInt(document.getElementById('f-baths').value)||0,
