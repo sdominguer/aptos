@@ -300,6 +300,15 @@
 
   .empty-state p { font-size: 0.9rem; }
 
+  .loading-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+
+  .loading-state p { font-size: 0.95rem; }
+
   /* Modal */
   .overlay {
     display: none;
@@ -422,7 +431,6 @@
 
   .photo-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
 
-  /* Status quick-change select on card */
   .status-select {
     font-family: 'DM Sans', sans-serif;
     font-size: 0.72rem;
@@ -559,24 +567,46 @@
 </div>
 
 <script>
+const STORAGE_KEY = 'fabi-apartamentos';
 const STATUS_LABELS = { pending:'Por ver', seen:'Lo vimos', fav:'Favorito ❤️', disc:'Descartado' };
 const STATUS_CLASS  = { pending:'badge-pending', seen:'badge-seen', fav:'badge-fav', disc:'badge-disc' };
-const STATUS_COLOR  = { pending:'#856404', seen:'#0A3B6E', fav:'#8B1A4A', disc:'#78716C' };
 
 let apts = [];
 let editingId = null;
 let currentFilter = 'all';
 let currentRating = 0;
+let isLoading = true;
 
-function load() {
-  try { apts = JSON.parse(localStorage.getItem('apts_v2') || '[]'); } catch(e) { apts = []; }
+// ── Persistent Storage helpers ──
+async function load() {
+  isLoading = true;
+  renderLoading();
+  try {
+    const result = await window.storage.get(STORAGE_KEY);
+    apts = result ? JSON.parse(result.value) : [];
+  } catch (e) {
+    // Key doesn't exist yet or error — start fresh
+    apts = [];
+  }
+  isLoading = false;
+  render();
 }
 
-function save() {
-  localStorage.setItem('apts_v2', JSON.stringify(apts));
+async function save() {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(apts));
+  } catch (e) {
+    console.error('Error guardando datos:', e);
+    alert('Hubo un error al guardar. Intenta de nuevo.');
+  }
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function renderLoading() {
+  document.getElementById('grid').innerHTML = `<div class="loading-state"><p>Cargando apartamentos...</p></div>`;
+  document.getElementById('stats-bar').innerHTML = '';
+}
 
 function renderStats() {
   const total   = apts.length;
@@ -653,19 +683,19 @@ function renderGrid() {
 
 function render() { renderStats(); renderGrid(); }
 
-function cycleStatus(id) {
+async function cycleStatus(id) {
   const a = apts.find(x=>x.id===id);
   if (!a) return;
   const cycle = ['pending','seen','fav','disc'];
   const idx = cycle.indexOf(a.status);
   a.status = cycle[(idx+1)%cycle.length];
-  save(); render();
+  await save(); render();
 }
 
-function deleteApt(id) {
+async function deleteApt(id) {
   if (!confirm('¿Eliminar este apartamento?')) return;
   apts = apts.filter(a=>a.id!==id);
-  save(); render();
+  await save(); render();
 }
 
 function openModal(apt) {
@@ -707,7 +737,7 @@ function previewPhoto() {
   else { prev.src=''; prev.classList.remove('visible'); }
 }
 
-function saveApt() {
+async function saveApt() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { alert('El nombre es obligatorio'); return; }
   const rawTags = document.getElementById('f-tags').value.trim();
@@ -735,7 +765,7 @@ function saveApt() {
   } else {
     apts.push({ id: uid(), createdAt: Date.now(), ...data });
   }
-  save(); render(); closeModal();
+  await save(); render(); closeModal();
 }
 
 function setRating(val) {
@@ -763,8 +793,8 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Initialize with persistent storage
 load();
-render();
 </script>
 </body>
 </html>
