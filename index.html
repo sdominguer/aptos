@@ -294,6 +294,37 @@
 
   .listing-link:hover { text-decoration: underline; }
 
+  .visit-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0.3rem 0.65rem;
+    border-radius: 8px;
+    background: #E8F5E9;
+    border: 1px solid #C8E6C9;
+    font-size: 0.78rem;
+    color: #2E7D32;
+    font-weight: 500;
+  }
+
+  .visit-badge.past {
+    background: #F5F0EE;
+    border-color: #E4E0D8;
+    color: #78716C;
+  }
+
+  .visit-badge.today {
+    background: #FFF8E1;
+    border-color: #FFE082;
+    color: #F57F17;
+    animation: pulse-visit 2s infinite;
+  }
+
+  @keyframes pulse-visit {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,127,23,0.2); }
+    50% { box-shadow: 0 0 0 6px rgba(245,127,23,0); }
+  }
+
   .empty-state {
     grid-column: 1 / -1;
     text-align: center;
@@ -553,6 +584,16 @@
         <input type="number" id="f-baths" min="0" max="10" placeholder="1" />
       </div>
 
+      <div class="form-group">
+        <label>📅 Cita para verlo</label>
+        <input type="date" id="f-visit-date" />
+      </div>
+
+      <div class="form-group">
+        <label>🕐 Hora</label>
+        <input type="time" id="f-visit-time" />
+      </div>
+
       <div class="form-group full">
         <label>Características (separadas por coma)</label>
         <input type="text" id="f-tags" placeholder="Balcón, Parqueadero, Pet friendly, Amoblado..." />
@@ -583,7 +624,7 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'fabi-apartamentos';
+const API_URL = 'https://script.google.com/macros/s/AKfycbywL_mP_oyQDbVXyhcBhmQ_KNHctThXJoDm15etZuo4IruMKJNvf7PryOjEHAxMIepk7w/exec';
 const STATUS_LABELS = { pending:'Por ver', seen:'Lo vimos', fav:'Favorito ❤️', disc:'Descartado' };
 const STATUS_CLASS  = { pending:'badge-pending', seen:'badge-seen', fav:'badge-fav', disc:'badge-disc' };
 
@@ -593,27 +634,45 @@ let currentFilter = 'all';
 let currentRating = 0;
 let isLoading = true;
 
-// ── Persistent Storage helpers ──
+// ── Google Sheets API helpers ──
 async function load() {
   isLoading = true;
   renderLoading();
   try {
-    const result = await window.storage.get(STORAGE_KEY);
-    apts = result ? JSON.parse(result.value) : [];
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    apts = Array.isArray(data) ? data : [];
   } catch (e) {
-    // Key doesn't exist yet or error — start fresh
+    console.error('Error cargando:', e);
     apts = [];
   }
   isLoading = false;
   render();
 }
 
-async function save() {
+async function saveToSheet(apt) {
   try {
-    await window.storage.set(STORAGE_KEY, JSON.stringify(apts));
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'save', data: apt })
+    });
   } catch (e) {
-    console.error('Error guardando datos:', e);
-    alert('Hubo un error al guardar. Intenta de nuevo.');
+    console.error('Error guardando:', e);
+    alert('Error al guardar. Revisa tu conexión.');
+  }
+}
+
+async function deleteFromSheet(id) {
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'delete', id: id })
+    });
+  } catch (e) {
+    console.error('Error eliminando:', e);
+    alert('Error al eliminar. Revisa tu conexión.');
   }
 }
 
@@ -632,6 +691,33 @@ function formatPriceInput(el) {
   if (!raw) { el.value = ''; return; }
   const num = parseInt(raw);
   el.value = num.toLocaleString('es-CO');
+}
+
+function formatVisitBadge(dateStr, timeStr) {
+  if (!dateStr) return '';
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const visitDate = new Date(dateStr + 'T00:00:00');
+  const diff = Math.floor((visitDate - today) / (1000*60*60*24));
+
+  let label = '';
+  let cls = 'visit-badge';
+
+  if (diff < 0) {
+    cls += ' past';
+    label = 'Visitado';
+  } else if (diff === 0) {
+    cls += ' today';
+    label = '¡Hoy!';
+  } else if (diff === 1) {
+    label = 'Mañana';
+  } else {
+    const options = { weekday: 'short', day: 'numeric', month: 'short' };
+    label = visitDate.toLocaleDateString('es-CO', options);
+  }
+
+  const timeLabel = timeStr ? ` · ${timeStr}` : '';
+  return `<span class="${cls}">📅 ${label}${timeLabel}</span>`;
 }
 
 function renderLoading() {
@@ -690,6 +776,7 @@ function renderGrid() {
         </div>
         ${roomsStr ? `<div class="card-meta"><div class="meta-row"><svg class="meta-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>${roomsStr}</div></div>` : ''}
         ${a.address ? `<div class="card-meta"><div class="meta-row"><svg class="meta-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escHtml(a.address)}</div></div>` : ''}
+        ${a.visitDate ? `<div>${formatVisitBadge(a.visitDate, a.visitTime)}</div>` : ''}
         ${a.rating ? `<div>${starsHTML(a.rating)}</div>` : ''}
         ${tags ? `<div class="card-tags">${tags}</div>` : ''}
         ${a.notes ? `<div class="card-notes">${escHtml(a.notes)}</div>` : ''}
@@ -723,13 +810,15 @@ async function cycleStatus(id) {
   const cycle = ['pending','seen','fav','disc'];
   const idx = cycle.indexOf(a.status);
   a.status = cycle[(idx+1)%cycle.length];
-  await save(); render();
+  render();
+  await saveToSheet(a);
 }
 
 async function deleteApt(id) {
   if (!confirm('¿Eliminar este apartamento?')) return;
   apts = apts.filter(a=>a.id!==id);
-  await save(); render();
+  render();
+  await deleteFromSheet(id);
 }
 
 function openModal(apt) {
@@ -744,6 +833,8 @@ function openModal(apt) {
   document.getElementById('f-photo').value   = apt?.photo   || '';
   document.getElementById('f-rooms').value   = apt?.rooms   || '';
   document.getElementById('f-baths').value   = apt?.baths   || '';
+  document.getElementById('f-visit-date').value = apt?.visitDate || '';
+  document.getElementById('f-visit-time').value = apt?.visitTime || '';
   document.getElementById('f-tags').value    = (apt?.tags||[]).join(', ');
   document.getElementById('f-notes').value   = apt?.notes   || '';
   setRating(apt?.rating || 0);
@@ -790,6 +881,8 @@ async function saveApt() {
     photo:   firstPhoto,
     rooms:   parseInt(document.getElementById('f-rooms').value)||0,
     baths:   parseInt(document.getElementById('f-baths').value)||0,
+    visitDate: document.getElementById('f-visit-date').value,
+    visitTime: document.getElementById('f-visit-time').value,
     tags,
     notes:   document.getElementById('f-notes').value.trim(),
     rating:  currentRating,
@@ -797,11 +890,17 @@ async function saveApt() {
 
   if (editingId) {
     const idx = apts.findIndex(a=>a.id===editingId);
-    if (idx>-1) apts[idx] = { ...apts[idx], ...data };
+    if (idx>-1) {
+      apts[idx] = { ...apts[idx], ...data };
+      render(); closeModal();
+      await saveToSheet(apts[idx]);
+    }
   } else {
-    apts.push({ id: uid(), createdAt: Date.now(), ...data });
+    const newApt = { id: uid(), createdAt: Date.now(), ...data };
+    apts.push(newApt);
+    render(); closeModal();
+    await saveToSheet(newApt);
   }
-  await save(); render(); closeModal();
 }
 
 function setRating(val) {
