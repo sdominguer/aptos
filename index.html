@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nuestros Apartamentos</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --border: #E4E0D8;
+    --text: #1C1917;
+    --text-muted: #78716C;
+    --accent: #2D6A4F;
+    --accent-light: #D8F3DC;
+    --pending: #FFF3CD;
+    --pending-text: #856404;
+    --seen: #D0E8FF;
+    --seen-text: #0A3B6E;
+    --fav: #FFE5F0;
+    --fav-text: #8B1A4A;
+    --disc: #F5F0EE;
+    --disc-text: #78716C;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .header-title h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    font-weight: 400;
+    color: var(--text);
+  }
+
+  .header-title p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+
+  .filter-btn.active {
+    background: var(--text);
+    color: var(--surface);
+    border-color: var(--text);
+  }
+
+  .btn-add {
+    padding: 0.5rem 1.2rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-add:hover { opacity: 0.85; }
+
+  .stats-bar {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.75rem 2rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .stat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .stat-num { font-weight: 500; color: var(--text); }
+
+  main {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.15s;
+  }
+
+  .card:hover { transform: translateY(-2px); }
+  .card.discarded { opacity: 0.55; }
+
+  .card-photo {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+  }
+
+  .photo-placeholder svg { opacity: 0.35; }
+
+  .card-body { padding: 1rem 1.1rem; flex: 1; display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+
+  .card-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .status-badge {
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .badge-pending { background: var(--pending); color: var(--pending-text); }
+  .badge-seen    { background: var(--seen);    color: var(--seen-text); }
+  .badge-fav     { background: var(--fav);     color: var(--fav-text); }
+  .badge-disc    { background: var(--disc);    color: var(--disc-text); }
+
+  .card-meta { font-size: 0.82rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
+
+  .meta-row { display: flex; align-items: flex-start; gap: 0.4rem; }
+
+  .meta-icon { width: 14px; flex-shrink: 0; margin-top: 1px; opacity: 0.6; }
+
+  .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  .tag {
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .card-notes {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    border-top: 1px solid var(--border);
+    padding-top: 0.6rem;
+    margin-top: 0.2rem;
+    font-style: italic;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 1.1rem;
+    border-top: 1px solid var(--border);
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .price {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .card-actions { display: flex; gap: 0.4rem; }
+
+  .icon-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+    color: var(--text-muted);
+  }
+
+  .icon-btn:hover { background: var(--bg); }
+  .icon-btn.danger:hover { background: #FFEEED; color: #C0392B; border-color: #FBBBB9; }
+
+  .map-link {
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .map-link:hover { text-decoration: underline; }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+  }
+
+  .empty-state h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .empty-state p { font-size: 0.9rem; }
+
+  /* Modal */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 540px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+  }
+
+  .close-btn {
+    background: none; border: none;
+    font-size: 1.4rem; cursor: pointer;
+    color: var(--text-muted); line-height: 1;
+    padding: 4px;
+  }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+  .form-group.full { grid-column: 1 / -1; }
+
+  label { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); }
+
+  input, select, textarea {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-cancel {
+    padding: 0.5rem 1.1rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background 0.12s;
+  }
+
+  .btn-cancel:hover { background: var(--bg); }
+
+  .btn-save {
+    padding: 0.5rem 1.3rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.12s;
+  }
+
+  .btn-save:hover { opacity: 0.85; }
+
+  .photo-preview {
+    width: 100%;
+    height: 160px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    object-fit: cover;
+    display: none;
+  }
+
+  .photo-preview.visible { display: block; }
+
+  .photo-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+  /* Status quick-change select on card */
+  .status-select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    padding: 0.22rem 0.5rem;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .rating-stars { display: flex; gap: 4px; }
+  .star { font-size: 1.1rem; cursor: pointer; color: #D4C5A9; transition: color 0.1s; }
+  .star.filled { color: #E9A100; }
+
+  @media (max-width: 600px) {
+    header { padding: 1rem; }
+    main { padding: 1rem; }
+    .stats-bar { padding: 0.75rem 1rem; gap: 1rem; }
+    .form-grid { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <h1>🏠 Nuestros Apartamentos</h1>
+    <p>Organiza la búsqueda sin estrés</p>
+  </div>
+  <div class="header-actions">
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all">Todos</button>
+      <button class="filter-btn" data-filter="pending">Por ver</button>
+      <button class="filter-btn" data-filter="seen">Vistos</button>
+      <button class="filter-btn" data-filter="fav">Favoritos</button>
+      <button class="filter-btn" data-filter="disc">Descartados</button>
+    </div>
+    <button class="btn-add" onclick="openModal()">+ Agregar</button>
+  </div>
+</header>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="closeIfBackdrop(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Nuevo apartamento</h2>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Nombre o apodo del apto *</label>
+        <input type="text" id="f-name" placeholder="Ej: El del barrio Laureles" />
+      </div>
+
+      <div class="form-group">
+        <label>Precio ($/mes)</label>
+        <input type="text" id="f-price" placeholder="Ej: $1.800.000" />
+      </div>
+
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="f-status">
+          <option value="pending">Por ver</option>
+          <option value="seen">Lo vimos</option>
+          <option value="fav">Favorito ❤️</option>
+          <option value="disc">Descartado</option>
+        </select>
+      </div>
+
+      <div class="form-group full">
+        <label>Dirección / Ubicación</label>
+        <input type="text" id="f-address" placeholder="Ej: Cra 70 #45-12, Laureles, Medellín" />
+      </div>
+
+      <div class="form-group full">
+        <label>Link de Google Maps (opcional)</label>
+        <input type="url" id="f-maplink" placeholder="https://maps.google.com/..." />
+      </div>
+
+      <div class="form-group full">
+        <label>Fotos (URLs separadas por coma, o pega la primera URL aquí)</label>
+        <input type="text" id="f-photo" placeholder="https://..." oninput="previewPhoto()" />
+        <img class="photo-preview" id="photo-preview" alt="Vista previa" />
+        <span class="photo-hint">Puedes usar links de Mercado Libre, Fincaraíz, WhatsApp Web, etc.</span>
+      </div>
+
+      <div class="form-group">
+        <label>Habitaciones</label>
+        <input type="number" id="f-rooms" min="0" max="10" placeholder="2" />
+      </div>
+
+      <div class="form-group">
+        <label>Baños</label>
+        <input type="number" id="f-baths" min="0" max="10" placeholder="1" />
+      </div>
+
+      <div class="form-group full">
+        <label>Características (separadas por coma)</label>
+        <input type="text" id="f-tags" placeholder="Balcón, Parqueadero, Pet friendly, Amoblado..." />
+      </div>
+
+      <div class="form-group full">
+        <label>Nuestra calificación</label>
+        <div class="rating-stars" id="rating-stars">
+          <span class="star" data-val="1">★</span>
+          <span class="star" data-val="2">★</span>
+          <span class="star" data-val="3">★</span>
+          <span class="star" data-val="4">★</span>
+          <span class="star" data-val="5">★</span>
+        </div>
+      </div>
+
+      <div class="form-group full">
+        <label>Notas y comentarios</label>
+        <textarea id="f-notes" placeholder="Lo que nos gustó, lo que no, preguntas pendientes..."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveApt()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATUS_LABELS = { pending:'Por ver', seen:'Lo vimos', fav:'Favorito ❤️', disc:'Descartado' };
+const STATUS_CLASS  = { pending:'badge-pending', seen:'badge-seen', fav:'badge-fav', disc:'badge-disc' };
+const STATUS_COLOR  = { pending:'#856404', seen:'#0A3B6E', fav:'#8B1A4A', disc:'#78716C' };
+
+let apts = [];
+let editingId = null;
+let currentFilter = 'all';
+let currentRating = 0;
+
+function load() {
+  try { apts = JSON.parse(localStorage.getItem('apts_v2') || '[]'); } catch(e) { apts = []; }
+}
+
+function save() {
+  localStorage.setItem('apts_v2', JSON.stringify(apts));
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function renderStats() {
+  const total   = apts.length;
+  const pending = apts.filter(a=>a.status==='pending').length;
+  const seen    = apts.filter(a=>a.status==='seen').length;
+  const fav     = apts.filter(a=>a.status==='fav').length;
+  const disc    = apts.filter(a=>a.status==='disc').length;
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat"><span class="stat-dot" style="background:#888"></span> <span class="stat-num">${total}</span> total</div>
+    <div class="stat"><span class="stat-dot" style="background:#856404"></span> <span class="stat-num">${pending}</span> por ver</div>
+    <div class="stat"><span class="stat-dot" style="background:#185FA5"></span> <span class="stat-num">${seen}</span> vistos</div>
+    <div class="stat"><span class="stat-dot" style="background:#8B1A4A"></span> <span class="stat-num">${fav}</span> favoritos</div>
+    <div class="stat"><span class="stat-dot" style="background:#78716C"></span> <span class="stat-num">${disc}</span> descartados</div>
+  `;
+}
+
+function starsHTML(rating) {
+  if (!rating) return '';
+  return Array.from({length:5}, (_,i) =>
+    `<span style="font-size:0.9rem;color:${i<rating?'#E9A100':'#D4C5A9'}">★</span>`
+  ).join('');
+}
+
+function renderGrid() {
+  const list = currentFilter === 'all' ? apts : apts.filter(a=>a.status===currentFilter);
+  const grid = document.getElementById('grid');
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state"><h3>Nada aquí todavía</h3><p>Agrega el primer apartamento con el botón "+"</p></div>`;
+    return;
+  }
+  grid.innerHTML = list.map(a => {
+    const tags = (a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
+    const photoHTML = a.photo
+      ? `<img src="${escHtml(a.photo)}" alt="foto" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><div class="photo-placeholder" style="display:none;position:absolute;inset:0;background:#F7F5F0;flex-direction:column;align-items:center;justify-content:center"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span style="font-size:0.75rem;margin-top:4px">Sin imagen</span></div>`
+      : `<div class="photo-placeholder"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><span>Sin foto aún</span></div>`;
+    const mapHTML = a.maplink
+      ? `<a class="map-link" href="${escHtml(a.maplink)}" target="_blank" rel="noopener"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>Ver en mapa</a>`
+      : '';
+    const roomsStr = [a.rooms ? `${a.rooms} hab.` : '', a.baths ? `${a.baths} baño${a.baths>1?'s':''}` : ''].filter(Boolean).join(' · ');
+    return `
+    <div class="card ${a.status==='disc'?'discarded':''}" id="card-${a.id}">
+      <div class="card-photo" style="position:relative">${photoHTML}</div>
+      <div class="card-body">
+        <div class="card-top">
+          <div class="card-name">${escHtml(a.name)}</div>
+          <span class="status-badge ${STATUS_CLASS[a.status]}">${STATUS_LABELS[a.status]}</span>
+        </div>
+        ${roomsStr ? `<div class="card-meta"><div class="meta-row"><svg class="meta-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>${roomsStr}</div></div>` : ''}
+        ${a.address ? `<div class="card-meta"><div class="meta-row"><svg class="meta-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escHtml(a.address)}</div></div>` : ''}
+        ${a.rating ? `<div>${starsHTML(a.rating)}</div>` : ''}
+        ${tags ? `<div class="card-tags">${tags}</div>` : ''}
+        ${a.notes ? `<div class="card-notes">${escHtml(a.notes)}</div>` : ''}
+      </div>
+      <div class="card-footer">
+        <div>
+          ${a.price ? `<div class="price">${escHtml(a.price)}</div>` : ''}
+          ${mapHTML}
+        </div>
+        <div class="card-actions">
+          <button class="icon-btn" title="Cambiar estado" onclick="cycleStatus('${a.id}')">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </button>
+          <button class="icon-btn" title="Editar" onclick="editApt('${a.id}')">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Eliminar" onclick="deleteApt('${a.id}')">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function render() { renderStats(); renderGrid(); }
+
+function cycleStatus(id) {
+  const a = apts.find(x=>x.id===id);
+  if (!a) return;
+  const cycle = ['pending','seen','fav','disc'];
+  const idx = cycle.indexOf(a.status);
+  a.status = cycle[(idx+1)%cycle.length];
+  save(); render();
+}
+
+function deleteApt(id) {
+  if (!confirm('¿Eliminar este apartamento?')) return;
+  apts = apts.filter(a=>a.id!==id);
+  save(); render();
+}
+
+function openModal(apt) {
+  editingId = apt ? apt.id : null;
+  document.getElementById('modal-title').textContent = apt ? 'Editar apartamento' : 'Nuevo apartamento';
+  document.getElementById('f-name').value    = apt?.name    || '';
+  document.getElementById('f-price').value   = apt?.price   || '';
+  document.getElementById('f-status').value  = apt?.status  || 'pending';
+  document.getElementById('f-address').value = apt?.address || '';
+  document.getElementById('f-maplink').value = apt?.maplink || '';
+  document.getElementById('f-photo').value   = apt?.photo   || '';
+  document.getElementById('f-rooms').value   = apt?.rooms   || '';
+  document.getElementById('f-baths').value   = apt?.baths   || '';
+  document.getElementById('f-tags').value    = (apt?.tags||[]).join(', ');
+  document.getElementById('f-notes').value   = apt?.notes   || '';
+  setRating(apt?.rating || 0);
+  const prev = document.getElementById('photo-preview');
+  if (apt?.photo) { prev.src = apt.photo; prev.classList.add('visible'); }
+  else { prev.src=''; prev.classList.remove('visible'); }
+  document.getElementById('overlay').classList.add('open');
+}
+
+function editApt(id) {
+  const a = apts.find(x=>x.id===id);
+  if (a) openModal(a);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  editingId = null;
+}
+
+function closeIfBackdrop(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
+
+function previewPhoto() {
+  const url = document.getElementById('f-photo').value.trim().split(',')[0].trim();
+  const prev = document.getElementById('photo-preview');
+  if (url) { prev.src = url; prev.classList.add('visible'); }
+  else { prev.src=''; prev.classList.remove('visible'); }
+}
+
+function saveApt() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('El nombre es obligatorio'); return; }
+  const rawTags = document.getElementById('f-tags').value.trim();
+  const tags = rawTags ? rawTags.split(',').map(t=>t.trim()).filter(Boolean) : [];
+  const photos = document.getElementById('f-photo').value.trim();
+  const firstPhoto = photos ? photos.split(',')[0].trim() : '';
+
+  const data = {
+    name,
+    price:   document.getElementById('f-price').value.trim(),
+    status:  document.getElementById('f-status').value,
+    address: document.getElementById('f-address').value.trim(),
+    maplink: document.getElementById('f-maplink').value.trim(),
+    photo:   firstPhoto,
+    rooms:   parseInt(document.getElementById('f-rooms').value)||0,
+    baths:   parseInt(document.getElementById('f-baths').value)||0,
+    tags,
+    notes:   document.getElementById('f-notes').value.trim(),
+    rating:  currentRating,
+  };
+
+  if (editingId) {
+    const idx = apts.findIndex(a=>a.id===editingId);
+    if (idx>-1) apts[idx] = { ...apts[idx], ...data };
+  } else {
+    apts.push({ id: uid(), createdAt: Date.now(), ...data });
+  }
+  save(); render(); closeModal();
+}
+
+function setRating(val) {
+  currentRating = val;
+  document.querySelectorAll('#rating-stars .star').forEach(s => {
+    s.classList.toggle('filled', parseInt(s.dataset.val) <= val);
+  });
+}
+
+document.getElementById('rating-stars').addEventListener('click', e => {
+  if (e.target.classList.contains('star')) setRating(parseInt(e.target.dataset.val));
+});
+
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.filter;
+  render();
+});
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+load();
+render();
+</script>
+</body>
+</html>
